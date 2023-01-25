@@ -30,6 +30,7 @@ import os
 import platform
 import sys
 from pathlib import Path
+import requests
 
 import torch
 import numpy as np
@@ -181,6 +182,34 @@ def run(
                         c = int(cls)  # integer class
                         label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
                         annotator.box_label(xyxy, label, color=colors(c, True))
+
+                        endpoint = "http://localhost:8000/carslots/"
+                        data = {
+                            'slotId': "A1",
+                            'x1': str(int(xyxy[0].item())),
+                            'y1': str(int(xyxy[1].item())),
+                            'x2': str(int(xyxy[2].item())),
+                            'y2': str(int(xyxy[3].item())),
+                            "object_name": names[int(cls)]
+                        }
+                        requests.post(url = endpoint, data = data)
+
+                        x1 = int(xyxy[0].item())
+                        y1 = int(xyxy[1].item())
+                        x2 = int(xyxy[2].item())
+                        y2 = int(xyxy[3].item())
+
+                        # Can be used when integrating with CNN
+                        # confidence_score = conf
+                        class_index = cls
+                        object_name = names[int(cls)]
+
+                        print('bounding box is ', x1, y1, x2, y2)
+                        print('class index is ', class_index)
+                        print('detected object name is ', object_name)
+                        # Pass params to backend
+
+
                     if save_crop:
                         save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
 
