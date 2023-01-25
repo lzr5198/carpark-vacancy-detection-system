@@ -185,7 +185,6 @@ def run(
 
                         endpoint = "http://localhost:8000/carslots/"
                         data = {
-                            'slotId': "A1",
                             'x1': str(int(xyxy[0].item())),
                             'y1': str(int(xyxy[1].item())),
                             'x2': str(int(xyxy[2].item())),
