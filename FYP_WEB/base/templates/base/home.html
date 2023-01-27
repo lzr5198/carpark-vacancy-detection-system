@@ -1,0 +1,28 @@
+{% extends 'main.html'%}
+{% block content%}
+<style>
+    .home-container{
+        display: grid;
+        grid-template-columns: 1fr 3fr
+    }
+</style>
+{% if request.user.is_authenticated%}
+<a href="{%url 'draw_rectangles'%}"> Draw Rectangles </a>
+{%endif%}
+<div class="home-container">
+    <p>
+        <b>Available:</b> <br>
+        <b>Occupied:</b><br>
+        <b>Last Update Time:</b> <br>
+    </p>
+
+    <div>
+        
+    </div>
+    
+
+</div>
+
+
+
+{% endblock content%}
