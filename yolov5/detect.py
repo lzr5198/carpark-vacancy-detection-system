@@ -171,6 +171,14 @@ def run(
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
                 # Write results
+                post_data = {
+                    "object_name": [],
+                    "x1": [],
+                    "y1": [],
+                    "x2": [],
+                    "y2": []
+                }
+                counter = 0
                 for *xyxy, conf, cls in reversed(det):
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
@@ -183,34 +191,19 @@ def run(
                         label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
                         annotator.box_label(xyxy, label, color=colors(c, True))
 
-                        endpoint = "http://localhost:8000/carslots/"
-                        data = {
-                            'x1': str(int(xyxy[0].item())),
-                            'y1': str(int(xyxy[1].item())),
-                            'x2': str(int(xyxy[2].item())),
-                            'y2': str(int(xyxy[3].item())),
-                            "object_name": names[int(cls)]
-                        }
-                        requests.post(url = endpoint, data = data)
-
-                        x1 = int(xyxy[0].item())
-                        y1 = int(xyxy[1].item())
-                        x2 = int(xyxy[2].item())
-                        y2 = int(xyxy[3].item())
-
                         # Can be used when integrating with CNN
                         # confidence_score = conf
-                        class_index = cls
-                        object_name = names[int(cls)]
-
-                        print('bounding box is ', x1, y1, x2, y2)
-                        print('class index is ', class_index)
-                        print('detected object name is ', object_name)
+                        post_data["object_name"].append(names[int(cls)])
+                        post_data["x1"].append(str(int(xyxy[0].item())))
+                        post_data["y1"].append(str(int(xyxy[1].item())))
+                        post_data["x2"].append(str(int(xyxy[2].item())))
+                        post_data["y2"].append(str(int(xyxy[3].item())))
                         # Pass params to backend
-
-
                     if save_crop:
                         save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
+                print(post_data)
+                endpoint = "http://localhost:8000/carslots/"
+                requests.post(url = endpoint, data = post_data)
 
             # Stream results
             im0 = annotator.result()

@@ -48,7 +48,7 @@ while cap.isOpened():
 
 
         # Show frame for testing
-        cv2.imshow('frame', frame)
+        # cv2.imshow('frame', frame)
         cv2.waitKey(1)
 
     elapsed_time_24h = time.time() - start_time_24h
