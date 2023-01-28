@@ -1,3 +1,6 @@
+{% extends 'main.html'%}
+
+{% block content%}
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <div id="test"></div>
 <div style="width: 800; height: 200; text-align: center; ">
@@ -11,6 +14,8 @@
         <h1 id="A4" style="background-color: black; width: 300; height: 100;">A4</h1>
     </div>
 </div>
+<a href="http://localhost:8000/draw_rectangles/">Draw Function</a>
+
 
 <script>
     $(document).ready(function() {
@@ -38,3 +43,5 @@
         }
     })
 </script>
+
+{% endblock content%}

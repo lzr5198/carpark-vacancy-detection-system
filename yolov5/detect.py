@@ -155,7 +155,7 @@ def run(
 
                 #print(det)
                 # Print results
-                det_dict = {}
+                
                 for i in range(det.shape[0]):
                     if det[i,5]==2:
                         print("Found a car at", det[i, :3], "(Top-left)", det[i, 2:4], "(Bottom-right)")
@@ -178,7 +178,6 @@ def run(
                     "x2": [],
                     "y2": []
                 }
-                counter = 0
                 for *xyxy, conf, cls in reversed(det):
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
@@ -201,6 +200,7 @@ def run(
                         # Pass params to backend
                     if save_crop:
                         save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
+                
                 print(post_data)
                 endpoint = "http://localhost:8000/carslots/"
                 requests.post(url = endpoint, data = post_data)

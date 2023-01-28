@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import os
 WIN_NAME = 'draw_rect'
-
+cfp=os.path.abspath(os.path.dirname(__file__))
 
 class Rect(object):
     def __init__(self):
@@ -134,7 +134,8 @@ def onmouse_draw_rect(event, x, y, flags, draw_rects):
                                        draw_rects.current_rect.br[1]))
         draw_rects.current_rect.regularize()
         draw_rects.append()
-        f=open('boundingBoxes/'+draw_rects.img_name+'.txt','w')
+        
+        f=open(cfp+'/box_coordinates/'+draw_rects.img_name+'.txt','w')
         for rect in draw_rects.rects:
             f.write('%d,%d,%d,%d\n'%(rect.tl[0],rect.tl[1],rect.br[0],rect.br[1]))
         f.close()
@@ -143,20 +144,22 @@ def onmouse_draw_rect(event, x, y, flags, draw_rects):
         draw_rects.pop()
         draw_rects.reset_image()
         draw_rects.draw()
-        f=open('boundingBoxes/'+draw_rects.img_name+'.txt','w')
+        f=open(cfp+'/box_coordinates/'+draw_rects.img_name+'.txt','w')
         for rect in draw_rects.rects:
             f.write('%d,%d,%d,%d\n'%(rect.tl[0],rect.tl[1],rect.br[0],rect.br[1]))
         f.close()
         
 if __name__ == '__main__':
-    img_loc = './test0.jpg'
+    img_loc = cfp+'/raw_imgs/base0.jpg'
+    print(img_loc+'\n\n\n')
     draw_rects = DrawRects(img_loc, (0, 255, 0), 1)
     cv2.namedWindow(WIN_NAME, 0)
     cv2.setMouseCallback(WIN_NAME, onmouse_draw_rect, draw_rects)
     while True:
         cv2.imshow(WIN_NAME,draw_rects.image_for_show)
         key = cv2.waitKey(30)
+        
         if key == 27:  # ESC
-            cv2.imwrite('Img_Boxes/'+draw_rects.img_name+'_bboxes'+'.jpg', draw_rects.image_for_show)
+            cv2.imwrite(cfp+'/processed_imgs/'+draw_rects.img_name+'_bboxes'+'.jpg', draw_rects.image_for_show)
             break
     cv2.destroyAllWindows()
