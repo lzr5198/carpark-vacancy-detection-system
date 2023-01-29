@@ -158,6 +158,6 @@ if __name__ == '__main__':
         cv2.imshow(WIN_NAME,draw_rects.image_for_show)
         key = cv2.waitKey(30)
         if key == 27:  # ESC
-            cv2.imwrite(cfp+'Img_Boxes/'+draw_rects.img_name+'_bboxes'+'.jpg', draw_rects.image_for_show)
+            cv2.imwrite(cfp+'/Img_Boxes/'+draw_rects.img_name+'_bboxes'+'.jpg', draw_rects.image_for_show)
             break
     cv2.destroyAllWindows()

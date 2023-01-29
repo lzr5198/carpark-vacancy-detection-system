@@ -6,5 +6,5 @@ urlpatterns = [
     path('logout/',views.logoutUser,name="logout"),
     path('',views.home,name="home"),
     path('draw_rectangles',views.draw_rectangles,name="draw_rectangles"),
-    path('draw',views.draw,name="draw"),
+    path('draw/<str:base>',views.draw,name="draw"),
 ]

@@ -31,12 +31,18 @@ def home(request):
     return render(request,'base/home.html')
 
 def draw_rectangles(request):
-    return render(request,'base/draw_rectangles.html')
+    #从base_imgs文件夹遍历base 图片，把文件名传入render
+    #context={"bases":bases}
+    bases=[]
+    for root, dirs, files in os.walk(cfp+"/DrawRectangle/base_imgs"):
+        for file in files:
+            bases.append(file)
+    context={"bases":bases}
+    return render(request,'base/draw_rectangles.html',context)
 
-def draw(request):
-    print(os.getcwd())
+def draw(request,base):
 
-    img_loc = cfp+'/DrawRectangle/test0.jpg'
+    img_loc = cfp+'/DrawRectangle/base_imgs/'+base
     draw_rects = DrawRects(img_loc, (0, 255, 0), 1)
     cv2.namedWindow(WIN_NAME, 0)
     cv2.setMouseCallback(WIN_NAME, onmouse_draw_rect, draw_rects)
@@ -48,6 +54,11 @@ def draw(request):
             break
     cv2.destroyAllWindows()
 
-    return render(request,'base/draw_rectangles.html')
+    bases=[]
+    for root, dirs, files in os.walk(cfp+"/DrawRectangle/base_imgs"):
+        for file in files:
+            bases.append(file)
+    context={"bases":bases}
+    return render(request,'base/draw_rectangles.html',context)
 
     

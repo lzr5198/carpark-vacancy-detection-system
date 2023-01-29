@@ -1,13 +1,14 @@
 {% extends 'main.html'%}
 {%block content%}
 
-{%comment%}
-#{%for picture in pictures%}      #遍历图片，一张一张设置超链接
+
+{%for base in bases%}      
+<a href="{%url 'draw' base%}">{{base}}</a> <br>
 {%endfor%}
-{%endcomment%}
 
 
-<a href="draw">Base1</a>
+
+
 
 
 {%endblock%}
