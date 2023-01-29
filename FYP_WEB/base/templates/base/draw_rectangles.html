@@ -1,0 +1,14 @@
+{% extends 'main.html'%}
+{%block content%}
+
+
+{%for base in bases%}      
+<a href="{%url 'draw' base%}">{{base}}</a> <br>
+{%endfor%}
+
+
+
+
+
+
+{%endblock%}
