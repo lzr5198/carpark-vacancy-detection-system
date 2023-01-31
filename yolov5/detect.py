@@ -116,7 +116,7 @@ def run(
     seen, windows, dt = 0, [], (Profile(), Profile(), Profile())
     for path, im, im0s, vid_cap, s in dataset:
 
-        print("im0s shape in detect.py", im0s[0].shape)
+        # print("im0s shape in detect.py", im0s[0].shape)
 
         with dt[0]:
             im = torch.from_numpy(im).to(model.device)
@@ -160,15 +160,15 @@ def run(
                 #print(det)
                 # Print results
                 
-                for i in range(det.shape[0]):
-                    if det[i,5]==2:
-                        print("Found a car at", det[i, :3], "(Top-left)", det[i, 2:4], "(Bottom-right)")
-                        print("with confidence:", det[i, 4])
+                # for i in range(det.shape[0]):
+                #     if det[i,5]==2:
+                #         print("Found a car at", det[i, :3], "(Top-left)", det[i, 2:4], "(Bottom-right)")
+                #         print("with confidence:", det[i, 4])
                     # det_dict[names[int(det[i,5])]] = {'top-left': det[i, :3],
                     #                                   'bottom-right': det[i, 2:4],
                     #                                   'probability': det[i, 4]}
                 
-                np.save(str(save_dir / 'tensor.npy'), det.numpy())
+                # np.save(str(save_dir / 'tensor.npy'), det.numpy())
                 
                 for c in det[:, 5].unique():
                     n = (det[:, 5] == c).sum()  # detections per class
@@ -205,7 +205,7 @@ def run(
                     if save_crop:
                         save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
                 
-                print(post_data)
+                print("post_data: ", post_data)
                 endpoint = "http://localhost:8000/carslots/"
                 requests.post(url = endpoint, data = post_data)
 

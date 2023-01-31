@@ -372,8 +372,8 @@ class LoadStreams:
             _, self.imgs[i] = cap.read()  # guarantee first frame
             self.mapx = None
             self.mapy = None
-            self.imgs[i] = self.compute_remap(self.imgs[i])
-            print("imgs[i] shape in init", self.imgs[i].shape)
+            # self.imgs[i] = self.compute_remap(self.imgs[i])
+            # print("imgs[i] shape in init", self.imgs[i].shape)
 
             self.threads[i] = Thread(target=self.update, args=([i, cap, s]), daemon=True)
             LOGGER.info(f"{st} Success ({self.frames[i]} frames {w}x{h} at {self.fps[i]:.2f} FPS)")
@@ -398,8 +398,8 @@ class LoadStreams:
                 success, im = cap.retrieve()
                 if success:
                     self.imgs[i] = im
-                    self.imgs[i] = self.compute_remap(self.imgs[i])
-                    print("imgs[i] shape in update", self.imgs[i].shape)
+                    # self.imgs[i] = self.compute_remap(self.imgs[i])
+                    # print("imgs[i] shape in update", self.imgs[i].shape)
                 else:
                     LOGGER.warning('WARNING ⚠️ Video stream unresponsive, please check your IP camera connection.')
                     self.imgs[i] = np.zeros_like(self.imgs[i])
@@ -417,13 +417,13 @@ class LoadStreams:
         image_useful = image*mask
         image_fisheye = image_useful[int(center[1])-int(radius):int(center[1])+int(radius),
                                     int(center[0])-int(radius):int(center[0])+int(radius),:]
-        print("shape in get_useful", image_fisheye.shape)
+        # print("shape in get_useful", image_fisheye.shape)
         return image_fisheye
         
-    def show_image(self, image):
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        plt.imshow(image)
-        plt.show()
+    # def show_image(self, image):
+    #     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    #     plt.imshow(image)
+    #     plt.show()
 
     def compute_remap(self, image):
 
@@ -440,11 +440,11 @@ class LoadStreams:
                     radius = H-i
                     self.mapx[i,j]=R+np.sin(angle)*radius
                     self.mapy[i,j]=R-np.cos(angle)*radius
-            print(self.mapx)
+            # print(self.mapx)
         
         
         image_remap = cv2.remap(image, self.mapx, self.mapy, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT) 
-        self.show_image(image_remap)
+        # self.show_image(image_remap)
         return image_remap
 
         
@@ -457,10 +457,13 @@ class LoadStreams:
         if not all(x.is_alive() for x in self.threads) or cv2.waitKey(1) == ord('q'):  # q to quit
             cv2.destroyAllWindows()
             raise StopIteration
+        
+        # Use undistorted images
+        im0 = [self.compute_remap(self.imgs[0])].copy()
 
-        print("im0 shape before remap", im0[0].shape)
-        im0 = list(self.compute_remap(self.imgs[0]).copy())
-        print("im0 shape in next", im0[0].shape)
+        # Use distorted images
+        # im0 = self.imgs.copy()
+        
         if self.transforms:
             im = np.stack([self.transforms(x) for x in im0])  # transforms
         else:
