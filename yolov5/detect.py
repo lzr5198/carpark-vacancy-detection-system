@@ -104,6 +104,7 @@ def run(
         view_img = check_imshow()
         dataset = LoadStreams(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
         bs = len(dataset)
+        print("newly init shape", dataset.imgs[0].shape)
     elif screenshot:
         dataset = LoadScreenshots(source, img_size=imgsz, stride=stride, auto=pt)
     else:
@@ -114,6 +115,9 @@ def run(
     model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
     seen, windows, dt = 0, [], (Profile(), Profile(), Profile())
     for path, im, im0s, vid_cap, s in dataset:
+
+        print("im0s shape in detect.py", im0s[0].shape)
+
         with dt[0]:
             im = torch.from_numpy(im).to(model.device)
             im = im.half() if model.fp16 else im.float()  # uint8 to fp16/32
