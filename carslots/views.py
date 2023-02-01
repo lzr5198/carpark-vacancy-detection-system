@@ -44,10 +44,14 @@ def compare_bounding_box(data):
         "A2": False,
         "A3": False,
         "A4": False,
+        "B1": False,
+        "B2": False,
+        "B3": False,
+        "B4": False,
     }
     for i in range(len(data["object_name"])):
-        # if data["object_name"][i] != "person":
-        #     continue
+        if data["object_name"][i] != "car":
+            continue
         for carslot in Carslot.objects.all():
             car_coor = [int(data['x1'][i]), int(data['y1'][i]), int(data['x2'][i]), int(data['y2'][i])]
             carslots_coor = [int(carslot.x1), int(carslot.y1), int(carslot.x2), int(carslot.y2)]

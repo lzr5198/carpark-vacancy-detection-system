@@ -3,15 +3,19 @@
 {% block content%}
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 
-<div style="width: 800; height: 300; text-align: center; ">
-    <div style="height: 200; width: 300; display: inline-block;">
-        <h1 id="A1" style="background-color: black; width: 300; height: 100;">A1</h1>
-        <h1 id="A3" style="background-color: black; width: 300; height: 100;">A3</h1>
+<div style="width: 800; height: 600; text-align: center; ">
+    <div style="height: 400; width: 300; display: inline-block;">
+        <h1 id="A1" style="background-color: rgb(114, 114, 114); width: 300; height: 100;">A1</h1>
+        <h1 id="A2" style="background-color: rgb(114, 114, 114); width: 300; height: 100;">A2</h1>
+        <h1 id="A3" style="background-color: rgb(114, 114, 114); width: 300; height: 100;">A3</h1>
+        <h1 id="A4" style="background-color: rgb(114, 114, 114); width: 300; height: 100;">A4</h1>
     </div>
-    <div style="height: 200; width: 100; display: inline-block;"></div>
-    <div style="height: 200; width: 300; display: inline-block;">
-        <h1 id="A2" style="background-color: black; width: 300; height: 100;">A2</h1>
-        <h1 id="A4" style="background-color: black; width: 300; height: 100;">A4</h1>
+    <div style="height: 400; width: 100; display: inline-block;"></div>
+    <div style="height: 400; width: 300; display: inline-block;">
+        <h1 id="B1" style="background-color: rgb(114, 114, 114); width: 300; height: 100;">B1</h1>
+        <h1 id="B2" style="background-color: rgb(114, 114, 114); width: 300; height: 100;">B2</h1>
+        <h1 id="B3" style="background-color: rgb(114, 114, 114); width: 300; height: 100;">B3</h1>
+        <h1 id="B4" style="background-color: rgb(114, 114, 114); width: 300; height: 100;">B4</h1>
     </div>
 </div>
 <a href="http://localhost:8000/draw_rectangles/">Draw Function</a>
@@ -29,10 +33,10 @@
                     let result = JSON.parse(data)
                     for (let key in result){
                         if (result[key] == false){
-                            document.getElementById(key).style.backgroundColor = "red"
+                            document.getElementById(key).style.backgroundColor = "green"
                         }
                         else{
-                            document.getElementById(key).style.backgroundColor = "green"
+                            document.getElementById(key).style.backgroundColor = "red"
                         }
                     }
                     setTimeout(function() {
