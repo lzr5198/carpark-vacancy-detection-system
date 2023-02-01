@@ -169,10 +169,7 @@ def CNN_output(request):
     line = f0.readline()
     i = 1
     while line != '':
-        BoundingBoxSet[str(i)] = line.strip().split(',')[0:4] #dummy key as 0, maybe we can add another field
-                                                 #at the end of each line of test0.txt to indicate
-                                                 #parking bay id, then the key will be like:
-                                                 #line.split(',')[4]
+        BoundingBoxSet[str(i)] = line.strip().split(',')[0:4]
         boxCoordinates = BoundingBoxSet[str(i)]
 
         print(int(boxCoordinates[0]))
