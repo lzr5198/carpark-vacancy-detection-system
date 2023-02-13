@@ -35,6 +35,8 @@ import requests
 import torch
 import numpy as np
 
+cfp=os.path.abspath(os.path.dirname(__file__))
+
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
 if str(ROOT) not in sys.path:
@@ -47,6 +49,67 @@ from utils.general import (LOGGER, Profile, check_file, check_img_size, check_im
                            increment_path, non_max_suppression, print_args, scale_boxes, strip_optimizer, xyxy2xywh)
 from utils.plots import Annotator, colors, save_one_box
 from utils.torch_utils import select_device, smart_inference_mode
+
+
+from torch.utils.data import Dataset,DataLoader
+import torch.nn as nn
+from torch.nn import Module
+from torch.nn import Conv2d
+from torch.nn import Linear
+from torch.nn import MaxPool2d
+from torch.nn import ReLU
+from torch.nn import LogSoftmax
+from torch.nn import BatchNorm2d
+from torch import sigmoid
+from torch import flatten
+from PIL import Image
+import numpy as np
+import pandas as pd
+import torch
+from torchvision import transforms
+from matplotlib import cm
+
+class CNN(nn.Module):
+    def __init__(self, batchSize):
+        super(CNN, self).__init__()
+        # input: 1*64*64 greyScale so 1 channel
+        self.layer1 = nn.Sequential(
+            # Defining a 2D convolution layer
+            Conv2d(in_channels=1, out_channels=32, kernel_size=3, stride=1, padding=1),
+            ReLU(inplace=True),
+            MaxPool2d(kernel_size=2, stride=2)
+        )
+        # 32*32*32
+        self.layer2 = nn.Sequential(
+            # Defining a 2D convolution layer
+            Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1),
+
+            ReLU(inplace=True),
+            MaxPool2d(kernel_size=2, stride=2)
+        )
+        # 64*16*16
+        self.layer3 = nn.Sequential(
+            # Defining a 2D convolution layer
+            Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1),
+            ReLU(inplace=True),
+            MaxPool2d(kernel_size=2, stride=2)
+        )
+        # 64*8*8
+        self.fc1 = nn.Linear(in_features=64 * 8 * 8, out_features=200)
+        self.fc2 = nn.Linear(in_features=200, out_features=1)
+        # -inf, inf
+
+    def forward(self, x):
+        x = self.layer1(x)
+
+        x = self.layer2(x)
+
+        x = self.layer3(x)
+
+        x = self.fc1(flatten(x, 1))
+        x = self.fc2(x)
+        result = sigmoid(x)
+        return result
 
 
 @smart_inference_mode()
@@ -104,27 +167,79 @@ def run(
         view_img = check_imshow()
         dataset = LoadStreams(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
         bs = len(dataset)
-        print("newly init shape", dataset.imgs[0].shape)
     elif screenshot:
         dataset = LoadScreenshots(source, img_size=imgsz, stride=stride, auto=pt)
     else:
         dataset = LoadImages(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
     vid_path, vid_writer = [None] * bs, [None] * bs
+    print(bs)
 
+    # CNN Model
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    fypCNN = CNN(64)
+    model_dict = torch.load(cfp + '/CNN/tensors.pt', map_location=torch.device('cpu'))
+    fypCNN.load_state_dict(model_dict)
+    fypCNN = fypCNN.to(device)
+
+    trans_resize = transforms.Resize([64, 64])
+    trans_tograyscale = transforms.Grayscale(num_output_channels=1)
+    trans_totensor = transforms.ToTensor()
+    trans_compose = transforms.Compose([trans_resize, trans_tograyscale, trans_totensor])
+    # CNN Model
+
+    # CNN related results
+    CNN_results = {}
+    BoundingBoxSet = {}
+    img_set = {}
+
+    f0 = open(cfp + '/CNN/boundingBoxes/video1.txt', 'r')
+    line = f0.readline()
+    i = 1
+    while line != '':
+        BoundingBoxSet[str(i)] = line.strip().split(',')[0:4]
+        i = i+1
+        line = f0.readline()
+    f0.close()
     # Run inference
     model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
     seen, windows, dt = 0, [], (Profile(), Profile(), Profile())
     for path, im, im0s, vid_cap, s in dataset:
-
-        # print("im0s shape in detect.py", im0s[0].shape)
-
         with dt[0]:
+
+            # For CNN
+            img = im0s
+            print("shape is: ")
+            print(img.shape)
+            print("-----------")
+
+            # img = Image.fromarray(img, mode="RGB")
+            img = Image.fromarray(np.uint8(img)).convert('RGB')
+            img.save("test.jpg")
+            # For CNN
+
             im = torch.from_numpy(im).to(model.device)
             im = im.half() if model.fp16 else im.float()  # uint8 to fp16/32
             im /= 255  # 0 - 255 to 0.0 - 1.0
             if len(im.shape) == 3:
                 im = im[None]  # expand for batch dim
 
+            for key in BoundingBoxSet:
+                boxCoordinates = BoundingBoxSet[key]
+                img_current = img.crop(((int(boxCoordinates[0])), int(boxCoordinates[1]), int(boxCoordinates[2]), int(boxCoordinates[3])))
+
+                img_out = trans_compose(img_current).to(device)
+                img_mean = img_out.mean()
+                std = 0.225
+                img_out = (img_out - img_mean) / std
+                img_out = img_out.unsqueeze(0)
+
+                img_set[key] = img_out
+
+                CNN_results[key] = fypCNN(img_set[key])
+            f = open(cfp + '/CNN/CNN_result.txt', 'w')
+            for key in CNN_results:
+                f.write('Bounding Box ' + str(key) + ' with coordinates: ' + str(BoundingBoxSet[key])
+                        + ' produces result: ' + str(CNN_results[key].detach().numpy()[0, 0]) + '\n')
         # Inference
         with dt[1]:
             visualize = increment_path(save_dir / Path(path).stem, mkdir=True) if visualize else False
@@ -159,29 +274,22 @@ def run(
 
                 #print(det)
                 # Print results
-                
-                # for i in range(det.shape[0]):
-                #     if det[i,5]==2:
-                #         print("Found a car at", det[i, :3], "(Top-left)", det[i, 2:4], "(Bottom-right)")
-                #         print("with confidence:", det[i, 4])
+                det_dict = {}
+                for i in range(det.shape[0]):
+                    if det[i,5]==2:
+                        print("Found a car at", det[i, :3], "(Top-left)", det[i, 2:4], "(Bottom-right)")
+                        print("with confidence:", det[i, 4])
                     # det_dict[names[int(det[i,5])]] = {'top-left': det[i, :3],
                     #                                   'bottom-right': det[i, 2:4],
                     #                                   'probability': det[i, 4]}
                 
-                # np.save(str(save_dir / 'tensor.npy'), det.numpy())
+                np.save(str(save_dir / 'tensor.npy'), det.numpy())
                 
                 for c in det[:, 5].unique():
                     n = (det[:, 5] == c).sum()  # detections per class
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
                 # Write results
-                post_data = {
-                    "object_name": [],
-                    "x1": [],
-                    "y1": [],
-                    "x2": [],
-                    "y2": []
-                }
                 for *xyxy, conf, cls in reversed(det):
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
@@ -194,20 +302,39 @@ def run(
                         label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
                         annotator.box_label(xyxy, label, color=colors(c, True))
 
+                        # endpoint = "http://localhost:8000/carslots/"
+                        data = {
+                            'slotId': "A1",
+                            'x1': str(int(xyxy[0].item())),
+                            'y1': str(int(xyxy[1].item())),
+                            'x2': str(int(xyxy[2].item())),
+                            'y2': str(int(xyxy[3].item())),
+                            'CNN_result': CNN_results,
+                            "object_name": names[int(cls)]
+                        }
+                        # requests.post(url = endpoint, data = data)
+
+                        # CNN
+                        # requests.post(url = endpoint, data = CNN_results)
+
+                        x1 = int(xyxy[0].item())
+                        y1 = int(xyxy[1].item())
+                        x2 = int(xyxy[2].item())
+                        y2 = int(xyxy[3].item())
+
                         # Can be used when integrating with CNN
                         # confidence_score = conf
-                        post_data["object_name"].append(names[int(cls)])
-                        post_data["x1"].append(str(int(xyxy[0].item())))
-                        post_data["y1"].append(str(int(xyxy[1].item())))
-                        post_data["x2"].append(str(int(xyxy[2].item())))
-                        post_data["y2"].append(str(int(xyxy[3].item())))
+                        class_index = cls
+                        object_name = names[int(cls)]
+
+                        print('bounding box is ', x1, y1, x2, y2)
+                        print('class index is ', class_index)
+                        print('detected object name is ', object_name)
                         # Pass params to backend
+
+
                     if save_crop:
                         save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
-                
-                print("post_data: ", post_data)
-                endpoint = "http://localhost:8000/carslots/"
-                requests.post(url = endpoint, data = post_data)
 
             # Stream results
             im0 = annotator.result()
@@ -220,23 +347,25 @@ def run(
                 cv2.waitKey(1)  # 1 millisecond
 
             # Save results (image with detections)
-            if save_img:
-                if dataset.mode == 'image':
-                    cv2.imwrite(save_path, im0)
-                else:  # 'video' or 'stream'
-                    if vid_path[i] != save_path:  # new video
-                        vid_path[i] = save_path
-                        if isinstance(vid_writer[i], cv2.VideoWriter):
-                            vid_writer[i].release()  # release previous video writer
-                        if vid_cap:  # video
-                            fps = vid_cap.get(cv2.CAP_PROP_FPS)
-                            w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                            h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                        else:  # stream
-                            fps, w, h = 30, im0.shape[1], im0.shape[0]
-                        save_path = str(Path(save_path).with_suffix('.mp4'))  # force *.mp4 suffix on results videos
-                        vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
-                    vid_writer[i].write(im0)
+
+            # The following section is commented to make it able to run
+            # if save_img:
+            #     if dataset.mode == 'image':
+            #         cv2.imwrite(save_path, im0)
+            #     else:  # 'video' or 'stream'
+            #         if vid_path[i] != save_path:  # new video
+            #             vid_path[i] = save_path
+            #             if isinstance(vid_writer[i], cv2.VideoWriter):
+            #                 vid_writer[i].release()  # release previous video writer
+            #             if vid_cap:  # video
+            #                 fps = vid_cap.get(cv2.CAP_PROP_FPS)
+            #                 w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            #                 h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            #             else:  # stream
+            #                 fps, w, h = 30, im0.shape[1], im0.shape[0]
+            #             save_path = str(Path(save_path).with_suffix('.mp4'))  # force *.mp4 suffix on results videos
+            #             vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
+            #         vid_writer[i].write(im0)
 
         # Print time (inference-only)
         LOGGER.info(f"{s}{'' if len(det) else '(no detections), '}{dt[1].dt * 1E3:.1f}ms")
