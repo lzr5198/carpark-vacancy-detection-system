@@ -1,0 +1,10 @@
+Bounding Box 1 with coordinates: ['68', '61', '198', '118'] produces result: 0.93599945
+Bounding Box 2 with coordinates: ['23', '135', '135', '234'] produces result: 0.9999794
+Bounding Box 3 with coordinates: ['0', '333', '122', '469'] produces result: 0.99986243
+Bounding Box 4 with coordinates: ['122', '469', '122', '469'] produces result: 0.0043046167
+Bounding Box 5 with coordinates: ['42', '476', '175', '578'] produces result: 0.99347925
+Bounding Box 6 with coordinates: ['478', '56', '577', '127'] produces result: 0.97098947
+Bounding Box 7 with coordinates: ['494', '126', '631', '303'] produces result: 0.91099197
+Bounding Box 8 with coordinates: ['489', '440', '603', '543'] produces result: 0.8219184
+Bounding Box 9 with coordinates: ['434', '559', '524', '603'] produces result: 0.93973434
+Bounding Box 10 with coordinates: ['387', '603', '446', '628'] produces result: 0.989711
