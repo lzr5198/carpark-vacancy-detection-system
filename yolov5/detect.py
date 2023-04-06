@@ -31,9 +31,12 @@ import platform
 import sys
 from pathlib import Path
 import requests
-
+import urllib.parse
 import torch
 import numpy as np
+import json
+
+cfp=os.path.abspath(os.path.dirname(__file__))
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -48,6 +51,66 @@ from utils.general import (LOGGER, Profile, check_file, check_img_size, check_im
 from utils.plots import Annotator, colors, save_one_box
 from utils.torch_utils import select_device, smart_inference_mode
 
+
+from torch.utils.data import Dataset,DataLoader
+import torch.nn as nn
+from torch.nn import Module
+from torch.nn import Conv2d
+from torch.nn import Linear
+from torch.nn import MaxPool2d
+from torch.nn import ReLU
+from torch.nn import LogSoftmax
+from torch.nn import BatchNorm2d
+from torch import sigmoid
+from torch import flatten
+from PIL import Image
+import numpy as np
+import pandas as pd
+import torch
+from torchvision import transforms
+from matplotlib import cm
+
+class CNN(nn.Module):
+    def __init__(self, batchSize):
+        super(CNN, self).__init__()
+        # input: 1*64*64 greyScale so 1 channel
+        self.layer1 = nn.Sequential(
+            # Defining a 2D convolution layer
+            Conv2d(in_channels=1, out_channels=32, kernel_size=3, stride=1, padding=1),
+            ReLU(inplace=True),
+            MaxPool2d(kernel_size=2, stride=2)
+        )
+        # 32*32*32
+        self.layer2 = nn.Sequential(
+            # Defining a 2D convolution layer
+            Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1),
+
+            ReLU(inplace=True),
+            MaxPool2d(kernel_size=2, stride=2)
+        )
+        # 64*16*16
+        self.layer3 = nn.Sequential(
+            # Defining a 2D convolution layer
+            Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1),
+            ReLU(inplace=True),
+            MaxPool2d(kernel_size=2, stride=2)
+        )
+        # 64*8*8
+        self.fc1 = nn.Linear(in_features=64 * 8 * 8, out_features=200)
+        self.fc2 = nn.Linear(in_features=200, out_features=1)
+        # -inf, inf
+
+    def forward(self, x):
+        x = self.layer1(x)
+
+        x = self.layer2(x)
+
+        x = self.layer3(x)
+
+        x = self.fc1(flatten(x, 1))
+        x = self.fc2(x)
+        result = sigmoid(x)
+        return result
 
 @smart_inference_mode()
 def run(
@@ -102,6 +165,7 @@ def run(
     bs = 1  # batch_size
     if webcam:
         view_img = check_imshow()
+        print("imgsz is: ", imgsz)
         dataset = LoadStreams(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
         bs = len(dataset)
         print("newly init shape", dataset.imgs[0].shape)
@@ -111,19 +175,80 @@ def run(
         dataset = LoadImages(source, img_size=imgsz, stride=stride, auto=pt, vid_stride=vid_stride)
     vid_path, vid_writer = [None] * bs, [None] * bs
 
+    # CNN Model
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    fypCNN = CNN(64)
+    model_dict = torch.load(cfp + '/CNN/tensors.pt', map_location=torch.device('cpu'))
+    fypCNN.load_state_dict(model_dict)
+    fypCNN = fypCNN.to(device)
+
+    trans_resize = transforms.Resize([64, 64])
+    trans_tograyscale = transforms.Grayscale(num_output_channels=1)
+    trans_totensor = transforms.ToTensor()
+    trans_compose = transforms.Compose([trans_resize, trans_tograyscale, trans_totensor])
+    # CNN Model
+
+    # CNN related results
+    CNN_results = {}
+    img_set = {}
+
     # Run inference
     model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
     seen, windows, dt = 0, [], (Profile(), Profile(), Profile())
     for path, im, im0s, vid_cap, s in dataset:
+        BoundingBoxSet = initialize_bounding_box_set()
 
-        # print("im0s shape in detect.py", im0s[0].shape)
-
+        # im0s[0] = compute_remap(im0s[0])
         with dt[0]:
+            # For CNN
+            ############################################# For rtsp stream #############################################
+            print("img shape is: ")
+            print(im0s[0].shape)
+            print("-----------")
+
+
+            img = im0s
+            img = Image.fromarray(np.uint8(img[0])).convert('RGB')
+            ############################################# For rtsp stream #############################################
+
+            ############################################# For video #############################################
+            # print("img shape is: ")
+            # print(img.shape)
+            # print("-----------")
+
+            # img = Image.fromarray(np.uint8(img)).convert('RGB')
+            ############################################# For video #############################################
+
+
+
             im = torch.from_numpy(im).to(model.device)
             im = im.half() if model.fp16 else im.float()  # uint8 to fp16/32
             im /= 255  # 0 - 255 to 0.0 - 1.0
             if len(im.shape) == 3:
                 im = im[None]  # expand for batch dim
+
+            for key in BoundingBoxSet:
+                boxCoordinates = BoundingBoxSet[key]
+                img_current = img.crop(((int(boxCoordinates[0])), int(boxCoordinates[1]), int(boxCoordinates[2]), int(boxCoordinates[3])))
+
+                img_out = trans_compose(img_current).to(device)
+                img_mean = img_out.mean()
+                std = 0.225
+                img_out = (img_out - img_mean) / std
+                img_out = img_out.unsqueeze(0)
+
+                img_set[key] = img_out
+
+                CNN_results[key] = fypCNN(img_set[key])
+
+                # print("CNN_result for ", key)
+                # print(CNN_results[key])
+                
+            f = open(cfp + '/CNN/CNN_result.txt', 'w')
+            for key in CNN_results:
+                f.write('Bounding Box ' + str(key) + ' with coordinates: ' + str(BoundingBoxSet[key])
+                        + ' produces result: ' + str(CNN_results[key].detach().numpy()[0, 0]) + '\n')
+            f.close()
 
         # Inference
         with dt[1]:
@@ -156,31 +281,29 @@ def run(
             if len(det):
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0.shape).round()
-
-                #print(det)
-                # Print results
-                
-                # for i in range(det.shape[0]):
-                #     if det[i,5]==2:
-                #         print("Found a car at", det[i, :3], "(Top-left)", det[i, 2:4], "(Bottom-right)")
-                #         print("with confidence:", det[i, 4])
-                    # det_dict[names[int(det[i,5])]] = {'top-left': det[i, :3],
-                    #                                   'bottom-right': det[i, 2:4],
-                    #                                   'probability': det[i, 4]}
-                
-                # np.save(str(save_dir / 'tensor.npy'), det.numpy())
                 
                 for c in det[:, 5].unique():
                     n = (det[:, 5] == c).sum()  # detections per class
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
                 # Write results
+                post_cnn = {}
+                for key in CNN_results:
+                    tmp = CNN_results[key].numpy()[0][0]
+                    if tmp > 0.5:
+                        post_cnn[key] = 1
+                    else:
+                        post_cnn[key] = 0
+                
+                cnn_result_encoded = json.dumps(post_cnn)
+                
                 post_data = {
                     "object_name": [],
                     "x1": [],
                     "y1": [],
                     "x2": [],
-                    "y2": []
+                    "y2": [],
+                    "CNN_result": cnn_result_encoded,
                 }
                 for *xyxy, conf, cls in reversed(det):
                     if save_txt:  # Write to file
@@ -205,7 +328,10 @@ def run(
                     if save_crop:
                         save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
                 
-                print("post_data: ", post_data)
+                print("post_data sent from detect")
+                print(post_data)
+                print()
+
                 endpoint = "http://localhost:8000/carslots/"
                 requests.post(url = endpoint, data = post_data)
 
@@ -250,6 +376,38 @@ def run(
     if update:
         strip_optimizer(weights[0])  # update model (to fix SourceChangeWarning)
 
+def initialize_bounding_box_set():
+    carslot_ids = []
+    box_coor = []
+    BoundingBoxSet = {}
+
+    f = open(cfp + '/CNN/boundingBoxes/spot.txt', 'r')
+    for i, line in enumerate(f):
+        line = line.rstrip()
+        if i % 2 == 0: carslot_ids.append(line)
+        else: box_coor.append(line)
+    f.close()
+    for i in range(len(carslot_ids)):
+        BoundingBoxSet[carslot_ids[i]] = box_coor[i].strip().split(',')[0:4]
+    
+    return BoundingBoxSet
+
+def compute_remap(image):
+    R = image.shape[0]//2
+    W = int(2*np.pi*R)
+    H = R
+    mapx = np.zeros([H,W], dtype=np.float32)
+    mapy = np.zeros([H,W], dtype=np.float32)
+
+    for i in range(mapx.shape[0]):
+        for j in range(mapx.shape[1]):
+            angle = j/W*np.pi*2
+            radius = H-i
+            mapx[i,j]=R+np.sin(angle)*radius
+            mapy[i,j]=R-np.cos(angle)*radius
+        
+    image_remap = cv2.remap(image, mapx, mapy, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT) 
+    return image_remap
 
 def parse_opt():
     parser = argparse.ArgumentParser()

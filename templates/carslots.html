@@ -1,51 +1,198 @@
 {% extends 'main.html'%}
 
 {% block content%}
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 
-<div style="width: 800; height: 600; text-align: center; ">
-    <div style="height: 400; width: 300; display: inline-block;">
-        <h1 id="A1" style="background-color: rgb(114, 114, 114); width: 300; height: 100;">A1</h1>
-        <h1 id="A2" style="background-color: rgb(114, 114, 114); width: 300; height: 100;">A2</h1>
-        <h1 id="A3" style="background-color: rgb(114, 114, 114); width: 300; height: 100;">A3</h1>
-        <h1 id="A4" style="background-color: rgb(114, 114, 114); width: 300; height: 100;">A4</h1>
+    <style>
+        .container div h1{
+            background-color: rgb(114, 114, 114);
+            width: 300px;
+            height: 100px;
+        }
+
+        .container {
+            width: 800px;
+            height: 500px;
+            position: relative;
+            text-align: center;
+        }
+
+        .centerA {
+            margin: 0;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            -ms-transform: translate(-120%, -50%);
+            transform: translate(-120%, -50%);
+        }
+        .centerB {
+            margin: 0;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            -ms-transform: translate(-0%, -50%);
+            transform: translate(-0%, -50%);
+        }
+    </style>
+
+    <h1>YOLO Result</h1>
+    <div id="yolo" class="container">
+        <div id="yoloA" class="centerA">
+        </div>
+        <div id="yoloB" class="centerB">
+        </div>
     </div>
-    <div style="height: 400; width: 100; display: inline-block;"></div>
-    <div style="height: 400; width: 300; display: inline-block;">
-        <h1 id="B1" style="background-color: rgb(114, 114, 114); width: 300; height: 100;">B1</h1>
-        <h1 id="B2" style="background-color: rgb(114, 114, 114); width: 300; height: 100;">B2</h1>
-        <h1 id="B3" style="background-color: rgb(114, 114, 114); width: 300; height: 100;">B3</h1>
-        <h1 id="B4" style="background-color: rgb(114, 114, 114); width: 300; height: 100;">B4</h1>
+
+    <h1>CNN Result</h1>
+    <div id="cnn" class="container">
+        <div id="cnnA" class="centerA">
+        </div>
+        <div id="cnnB" class="centerB">
+        </div>
     </div>
-</div>
-<a href="http://localhost:8000/draw_rectangles/">Draw Function</a>
 
+    <script>
+        $(document).ready(function() {
+            // Results passed from view
+            let slot_idsA;
+            let slot_idsB;
 
-<script>
-    $(document).ready(function() {
-        updateState();
+            let yolo_result;
+            let cnn_result;
 
-        function updateState(){
-            $.ajax({
-                url: "http://localhost:8000/carslots/ajax/",
-                type: "GET",
-                success: function(data){
-                    let result = JSON.parse(data)
-                    for (let key in result){
-                        if (result[key] == false){
-                            document.getElementById(key).style.backgroundColor = "green"
+            // yolo and cnn container
+            let yolo = document.getElementById('yolo');
+            let cnn = document.getElementById('cnn');
+
+            // yolo slots
+            let yoloA = document.getElementById('yoloA');
+            let yoloB = document.getElementById('yoloB');
+
+            // cnn slots
+            let cnnA = document.getElementById('cnnA');
+            let cnnB = document.getElementById('cnnB');
+
+            // get data from view
+            function parse_data(){
+                slot_idsA = JSON.parse('{{ slot_idsA|escapejs }}');
+                slot_idsB = JSON.parse('{{ slot_idsB|escapejs }}');
+                yolo_result = JSON.parse('{{ yolo_result|escapejs }}');
+                cnn_result = JSON.parse('{{ cnn_result|escapejs }}');
+            }
+
+            // render the color of slots
+            function updateSlot(){
+                // parse_data()
+                for (let key in yolo_result){
+                    if (yolo_result){
+                        slotId = "yolo_" + key
+                        slot = document.getElementById(slotId)
+                        if (slot){
+                            if (yolo_result[key] == 0)
+                                slot.style.backgroundColor = "green"
+                            else
+                                slot.style.backgroundColor = "red"
                         }
-                        else{
-                            document.getElementById(key).style.backgroundColor = "red"
+                        
+                    }
+                }
+
+                for (let key in cnn_result){
+                    if (cnn_result){
+                        slotId = "cnn_" + key
+                        slot = document.getElementById(slotId)
+                        if (slot){
+                            if (cnn_result[key] == 0)
+                                slot.style.backgroundColor = "green"
+                            else
+                                slot.style.backgroundColor = "red"
                         }
                     }
-                    setTimeout(function() {
-                        updateState()
-                    }, 500)
                 }
-            })
-        }
-    })
-</script>
+            }
+
+            // render the slots
+            function initialize(){
+                parse_data()
+
+                Alength = slot_idsA.length
+                Blength = slot_idsB.length
+                // id for each yolo slot - yolo_a1, yolo_a2, ...
+                // id for each cnn slot - cnn_a1, cnn_a2, ...
+                slot_idsA.forEach(element => {
+                    let yolo_h1 = document.createElement('h1');
+                    let cnn_h1 = document.createElement('h1');
+                    yolo_h1.id = "yolo_" + element;
+                    cnn_h1.id = "cnn_" + element;
+                    let yolo_text = document.createTextNode(element);
+                    let cnn_text = document.createTextNode(element);
+                    yolo_h1.appendChild(yolo_text);
+                    cnn_h1.appendChild(cnn_text);
+                    yoloA.appendChild(yolo_h1);
+                    cnnA.appendChild(cnn_h1);
+                });
+
+                slot_idsB.forEach(element => {
+                    let yolo_h1 = document.createElement('h1');
+                    let cnn_h1 = document.createElement('h1');
+                    yolo_h1.id = "yolo_" + element;
+                    cnn_h1.id = "cnn_" + element;
+                    let yolo_text = document.createTextNode(element);
+                    let cnn_text = document.createTextNode(element);
+                    yolo_h1.appendChild(yolo_text);
+                    cnn_h1.appendChild(cnn_text);
+                    yoloB.appendChild(yolo_h1);
+                    cnnB.appendChild(cnn_h1);
+                });
+
+                if (Alength > Blength){
+                    height = Alength * 125
+                    yolo.style.height = height;
+                    cnn.style.height = height;
+
+                }
+                else{
+                    height = Blength * 125
+                    yolo.style.height = height;
+                    cnn.style.height = height;
+                }
+                
+                console.log("slot_idsA")
+                console.log(slot_idsA)
+                console.log("slot_idsB")
+                console.log(slot_idsB)
+                console.log("YOLO result")
+                console.log(yolo_result)
+                console.log("CNN result")
+                console.log(cnn_result)
+                updateSlot()
+            }
+
+            // fetch data from view every 0.5s
+            function updateState(){
+                $.ajax({
+                    url: "http://localhost:8000/carslots/ajax/",
+                    type: "GET",
+                    success: function(data){
+                        yolo_result = JSON.parse(data.yolo_result);
+                        cnn_result = JSON.parse(data.cnn_result);
+
+                        // console.log("AJAX IS RUN")
+                        console.log(yolo_result)
+                        console.log(cnn_result)
+
+                        updateSlot()
+
+                        setTimeout(function() {
+                            updateState()
+                        }, 500)
+                    }
+                })
+            }
+            parse_data()
+            initialize()
+            updateState();
+        })
+    </script>
 
 {% endblock content%}

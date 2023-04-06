@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",
     "carslots",
-    "base",
+    "drawRect",
 ]
 
 MIDDLEWARE = [
@@ -73,6 +73,10 @@ TEMPLATES = [
             ],
         },
     },
+]
+
+STATICFILES_DIRS = [
+    'drawRect/DrawRectangle/processed_imgs',
 ]
 
 WSGI_APPLICATION = "fyp.wsgi.application"

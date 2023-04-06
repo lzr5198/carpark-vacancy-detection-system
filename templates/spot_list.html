@@ -1,0 +1,53 @@
+{% extends 'main.html'%}
+
+{% block header %}
+    <style>
+        .returnButton {
+            display: inline-block;
+            background-color: #000000;
+            color: #fff;
+            padding: 0.5rem 1rem;
+            margin: 5px;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 0.25rem;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .returnButton:hover {
+            background-color: grey;
+            cursor: pointer;
+        }
+    </style>
+
+    <a class="returnButton" href="{% url 'process_data' %}">Return</a>
+{% endblock %}
+
+{%block content%}
+    <style>
+        a.button {
+            display: inline-block;
+            background-color: #000000;
+            color: #fff;
+            padding: 0.5rem 1rem;
+            margin: 5px;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 0.25rem;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        a.button:hover {
+            background-color: grey;
+            cursor: pointer;
+        }
+    </style>
+
+    <ul>
+        {% for image in image_names %}
+            <a class="button" href="{% url 'spot' %}?image_name={{ image }}">{{ image }}</a>
+        {% endfor %}
+    </ul>
+{%endblock%}

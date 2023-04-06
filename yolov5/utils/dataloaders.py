@@ -2,7 +2,6 @@
 """
 Dataloaders and dataset utils
 """
-
 import contextlib
 import glob
 import hashlib
@@ -18,7 +17,7 @@ from pathlib import Path
 from threading import Thread
 from urllib.parse import urlparse
 from zipfile import ZipFile
-import matplotlib.pyplot as plt
+import requests
 
 import numpy as np
 import torch
@@ -345,6 +344,9 @@ class LoadStreams:
         self.img_size = img_size
         self.stride = stride
         self.vid_stride = vid_stride  # video frame-rate stride
+        self.mapx = None
+        self.mapy = None
+        self.undistort = False
         sources = Path(sources).read_text().rsplit() if Path(sources).is_file() else [sources]
         n = len(sources)
         self.sources = [clean_str(x) for x in sources]  # clean source names for later
@@ -360,7 +362,6 @@ class LoadStreams:
             if s == 0:
                 assert not is_colab(), '--source 0 webcam unsupported on Colab. Rerun command in a local environment.'
                 assert not is_kaggle(), '--source 0 webcam unsupported on Kaggle. Rerun command in a local environment.'
-            
             cap = cv2.VideoCapture(s)
             assert cap.isOpened(), f'{st}Failed to open {s}'
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -370,11 +371,6 @@ class LoadStreams:
             self.fps[i] = max((fps if math.isfinite(fps) else 0) % 100, 0) or 30  # 30 FPS fallback
 
             _, self.imgs[i] = cap.read()  # guarantee first frame
-            self.mapx = None
-            self.mapy = None
-            # self.imgs[i] = self.compute_remap(self.imgs[i])
-            # print("imgs[i] shape in init", self.imgs[i].shape)
-
             self.threads[i] = Thread(target=self.update, args=([i, cap, s]), daemon=True)
             LOGGER.info(f"{st} Success ({self.frames[i]} frames {w}x{h} at {self.fps[i]:.2f} FPS)")
             self.threads[i].start()
@@ -398,35 +394,14 @@ class LoadStreams:
                 success, im = cap.retrieve()
                 if success:
                     self.imgs[i] = im
-                    # self.imgs[i] = self.compute_remap(self.imgs[i])
-                    # print("imgs[i] shape in update", self.imgs[i].shape)
                 else:
                     LOGGER.warning('WARNING ⚠️ Video stream unresponsive, please check your IP camera connection.')
                     self.imgs[i] = np.zeros_like(self.imgs[i])
                     cap.open(stream)  # re-open stream if signal was lost
             time.sleep(0.0)  # wait time
 
-    def get_useful_area(self, image):
-        image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        _, image_binary = cv2.threshold(image_gray, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-        contours, _ = cv2.findContours(image_binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        contour_fisheye = sorted(contours, key=cv2.contourArea, reverse=True)[0]
-        center, radius = cv2.minEnclosingCircle(contour_fisheye)
-        mask = np.zeros_like(image, dtype=np.uint8)
-        mask = cv2.circle(mask, (int(center[0]), int(center[1])), int(radius), (1,1,1), -1)
-        image_useful = image*mask
-        image_fisheye = image_useful[int(center[1])-int(radius):int(center[1])+int(radius),
-                                    int(center[0])-int(radius):int(center[0])+int(radius),:]
-        # print("shape in get_useful", image_fisheye.shape)
-        return image_fisheye
-        
-    # def show_image(self, image):
-    #     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    #     plt.imshow(image)
-    #     plt.show()
-
     def compute_remap(self, image):
-
+    
         R = image.shape[0]//2
         W = int(2*np.pi*R)
         H = R
@@ -458,11 +433,17 @@ class LoadStreams:
             cv2.destroyAllWindows()
             raise StopIteration
         
-        # Use undistorted images
-        im0 = [self.compute_remap(self.imgs[0])].copy()
+        endpoint = "http://localhost:8000/drawRect/undistort/"
+        data = requests.get(url = endpoint).json()
+        
+        if data['undistort']:
+            # Use undistorted images
+            im0 = [self.compute_remap(self.imgs[0])].copy()
+        else:
+            # Use distorted images
+            im0 = self.imgs.copy()
 
-        # Use distorted images
-        # im0 = self.imgs.copy()
+
         
         if self.transforms:
             im = np.stack([self.transforms(x) for x in im0])  # transforms

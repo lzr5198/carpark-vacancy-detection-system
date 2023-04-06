@@ -1,0 +1,8 @@
+Bounding Box a1 with coordinates: ['436', '1489', '902', '1700'] produces result: 0.0011097965
+Bounding Box a2 with coordinates: ['83', '868', '933', '1521'] produces result: 0.0029496932
+Bounding Box a3 with coordinates: ['127', '304', '936', '786'] produces result: 0.19775644
+Bounding Box a4 with coordinates: ['310', '96', '875', '317'] produces result: 0.7605552
+Bounding Box b1 with coordinates: ['942', '1519', '1325', '1694'] produces result: 0.0052649463
+Bounding Box b2 with coordinates: ['959', '832', '1585', '1364'] produces result: 0.0033473326
+Bounding Box b3 with coordinates: ['944', '261', '1595', '820'] produces result: 0.00047843246
+Bounding Box b4 with coordinates: ['946', '130', '1372', '285'] produces result: 0.056892406
