@@ -35,6 +35,7 @@ import urllib.parse
 import torch
 import numpy as np
 import json
+import time
 
 cfp=os.path.abspath(os.path.dirname(__file__))
 
@@ -290,7 +291,7 @@ def run(
                 post_cnn = {}
                 for key in CNN_results:
                     tmp = CNN_results[key].numpy()[0][0]
-                    if tmp > 0.5:
+                    if tmp > 0.7:
                         post_cnn[key] = 1
                     else:
                         post_cnn[key] = 0
@@ -334,6 +335,8 @@ def run(
 
                 endpoint = "http://localhost:8000/carslots/"
                 requests.post(url = endpoint, data = post_data)
+
+                # time.sleep(5)
 
             # Stream results
             im0 = annotator.result()

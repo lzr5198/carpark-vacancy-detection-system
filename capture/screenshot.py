@@ -1,5 +1,7 @@
 import cv2
 import os
+import requests
+from undistort import compute_remap
 
 def get_filenames(directory):
     filenames = []
@@ -17,13 +19,15 @@ def get_index(directory):
         return 0
 
 if __name__ == '__main__':
+    endpoint = "http://localhost:8000/drawRect/undistort/"
+    data = requests.get(url = endpoint).json()
+
     cfp=os.path.abspath(os.path.dirname(__file__))
     f = open(os.getcwd() + '/stream.txt', "r")
     streamPath = f.readline().rstrip()
     f.close()
 
     currentIndex = str(get_index(cfp + '/screenshots')+1)
-    rawImgIndex = str(get_index(os.getcwd() + '/drawRect/DrawRectangle/raw_imgs'))
     savePath = cfp + '/screenshots/output' + currentIndex + '.jpg'
     # saveRawPath = os.getcwd() + '/drawRect/DrawRectangle/raw_imgs/spot' + rawImgIndex + '.jpg'
 
@@ -34,13 +38,9 @@ if __name__ == '__main__':
             print("Error: failed to capture frame from RTSP stream")
             break
 
-        # cv2.imshow("frame", frame)
-
-        # Press 'c' key to capture screenshot
-        # if cv2.waitKey(1) & 0xFF == ord('c'):
+        if data["undistort"]:
+            frame = compute_remap(frame)
         cv2.imwrite(savePath, frame)
-        # cv2.imwrite(saveRawPath, frame)
-        print("Screenshot captured")
         break
 
     cap.release()

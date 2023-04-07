@@ -263,6 +263,8 @@ if __name__ == '__main__':
     streamPath = f.readline().rstrip()
     f.close()
     currentIndex = str(get_index())
+
+    
     img_loc = cfp + '/raw_imgs/spot' + currentIndex + '.jpg'
 
     cap= cv2.VideoCapture(streamPath)
