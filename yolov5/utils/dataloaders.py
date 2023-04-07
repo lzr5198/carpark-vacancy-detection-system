@@ -2,7 +2,6 @@
 """
 Dataloaders and dataset utils
 """
-
 import contextlib
 import glob
 import hashlib
@@ -18,6 +17,7 @@ from pathlib import Path
 from threading import Thread
 from urllib.parse import urlparse
 from zipfile import ZipFile
+import requests
 
 import numpy as np
 import torch
@@ -344,6 +344,9 @@ class LoadStreams:
         self.img_size = img_size
         self.stride = stride
         self.vid_stride = vid_stride  # video frame-rate stride
+        self.mapx = None
+        self.mapy = None
+        self.undistort = False
         sources = Path(sources).read_text().rsplit() if Path(sources).is_file() else [sources]
         n = len(sources)
         self.sources = [clean_str(x) for x in sources]  # clean source names for later
@@ -397,6 +400,29 @@ class LoadStreams:
                     cap.open(stream)  # re-open stream if signal was lost
             time.sleep(0.0)  # wait time
 
+    def compute_remap(self, image):
+    
+        R = image.shape[0]//2
+        W = int(2*np.pi*R)
+        H = R
+    
+        if self.mapx is None or self.mapy is None:
+            self.mapx = np.zeros([H,W], dtype=np.float32)
+            self.mapy = np.zeros([H,W], dtype=np.float32)
+            for i in range(self.mapx.shape[0]):
+                for j in range(self.mapx.shape[1]):
+                    angle = j/W*np.pi*2
+                    radius = H-i
+                    self.mapx[i,j]=R+np.sin(angle)*radius
+                    self.mapy[i,j]=R-np.cos(angle)*radius
+            # print(self.mapx)
+        
+        
+        image_remap = cv2.remap(image, self.mapx, self.mapy, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT) 
+        # self.show_image(image_remap)
+        return image_remap
+
+        
     def __iter__(self):
         self.count = -1
         return self
@@ -406,8 +432,19 @@ class LoadStreams:
         if not all(x.is_alive() for x in self.threads) or cv2.waitKey(1) == ord('q'):  # q to quit
             cv2.destroyAllWindows()
             raise StopIteration
+        
+        endpoint = "http://localhost:8000/drawRect/undistort/"
+        data = requests.get(url = endpoint).json()
+        
+        if data['undistort']:
+            # Use undistorted images
+            im0 = [self.compute_remap(self.imgs[0])].copy()
+        else:
+            # Use distorted images
+            im0 = self.imgs.copy()
 
-        im0 = self.imgs.copy()
+
+        
         if self.transforms:
             im = np.stack([self.transforms(x) for x in im0])  # transforms
         else:
