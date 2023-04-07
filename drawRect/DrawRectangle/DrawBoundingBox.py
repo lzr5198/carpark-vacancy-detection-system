@@ -28,13 +28,13 @@ def get_index():
     else:
         return 0
 
-def get_carslot_id(q, x):
+def get_user_input(q, x, title, label):
     root = tk.Tk()
 
-    root.title("Carslot ID")
+    root.title(title)
     root.geometry("300x200")
 
-    input_label = tk.Label(root, text="Enter the carslot ID:")
+    input_label = tk.Label(root, text=label)
     input_entry = tk.Entry(root)
     input_entry.focus_set()
     def get_input(event=None):
@@ -188,7 +188,7 @@ def onmouse_draw_rect(event, x, y, flags, draw_rects):
 
         # pop dialog
         carslot_id = Queue()
-        p = Process(target=get_carslot_id, args=(carslot_id, 1))
+        p = Process(target=get_user_input, args=(carslot_id, 1, "Carslot ID", "What's the carslot ID: "))
         p.start()
         p.join() # this blocks until the process terminates
         carslot_id = carslot_id.get()
@@ -262,10 +262,20 @@ if __name__ == '__main__':
     f = open(os.getcwd() + '/stream.txt', "r")
     streamPath = f.readline().rstrip()
     f.close()
-    currentIndex = str(get_index())
 
-    
-    img_loc = cfp + '/raw_imgs/spot' + currentIndex + '.jpg'
+    ############################################ automatically name file ############################################
+    # currentIndex = str(get_index())
+    # img_loc = cfp + '/raw_imgs/spot' + currentIndex + '.jpg'
+    ############################################ automatically name file ############################################
+    ############################################ manually name file ############################################
+    # pop dialog
+    textFileName = Queue()
+    p = Process(target=get_user_input, args=(textFileName, 1, "Image Name", "What's the filename: "))
+    p.start()
+    p.join() # this blocks until the process terminates
+    filename = textFileName.get()
+    img_loc = cfp + '/raw_imgs/' + filename + '.jpg'
+    ############################################ manually name file ############################################
 
     cap= cv2.VideoCapture(streamPath)
     ret, frame = cap.read()

@@ -51,6 +51,14 @@
         </div>
     </div>
 
+    <h1>YOLO + CNN Result</h1>
+    <div id="general" class="container">
+        <div id="generalA" class="centerA">
+        </div>
+        <div id="generalB" class="centerB">
+        </div>
+    </div>
+
     <script>
         $(document).ready(function() {
             // Results passed from view
@@ -59,10 +67,12 @@
 
             let yolo_result;
             let cnn_result;
+            let general_result
 
             // yolo and cnn container
             let yolo = document.getElementById('yolo');
             let cnn = document.getElementById('cnn');
+            let general = document.getElementById('general');
 
             // yolo slots
             let yoloA = document.getElementById('yoloA');
@@ -72,12 +82,17 @@
             let cnnA = document.getElementById('cnnA');
             let cnnB = document.getElementById('cnnB');
 
+            // general slots
+            let generalA = document.getElementById('generalA');
+            let generalB = document.getElementById('generalB');
+
             // get data from view
             function parse_data(){
                 slot_idsA = JSON.parse('{{ slot_idsA|escapejs }}');
                 slot_idsB = JSON.parse('{{ slot_idsB|escapejs }}');
                 yolo_result = JSON.parse('{{ yolo_result|escapejs }}');
                 cnn_result = JSON.parse('{{ cnn_result|escapejs }}');
+                general_result = JSON.parse('{{ general_result|escapejs }}');
             }
 
             // render the color of slots
@@ -109,6 +124,19 @@
                         }
                     }
                 }
+
+                for (let key in general_result){
+                    if (general_result){
+                        slotId = "general_" + key
+                        slot = document.getElementById(slotId)
+                        if (slot){
+                            if (general_result[key] == 0)
+                                slot.style.backgroundColor = "green"
+                            else
+                                slot.style.backgroundColor = "red"
+                        }
+                    }
+                }
             }
 
             // render the slots
@@ -122,40 +150,47 @@
                 slot_idsA.forEach(element => {
                     let yolo_h1 = document.createElement('h1');
                     let cnn_h1 = document.createElement('h1');
+                    let general_h1 = document.createElement('h1');
                     yolo_h1.id = "yolo_" + element;
                     cnn_h1.id = "cnn_" + element;
+                    general_h1.id = "general_" + element;
                     let yolo_text = document.createTextNode(element);
                     let cnn_text = document.createTextNode(element);
+                    let general_text = document.createTextNode(element);
                     yolo_h1.appendChild(yolo_text);
                     cnn_h1.appendChild(cnn_text);
+                    general_h1.appendChild(general_text);
                     yoloA.appendChild(yolo_h1);
                     cnnA.appendChild(cnn_h1);
+                    generalA.appendChild(general_h1);
                 });
 
                 slot_idsB.forEach(element => {
                     let yolo_h1 = document.createElement('h1');
                     let cnn_h1 = document.createElement('h1');
+                    let general_h1 = document.createElement('h1');
                     yolo_h1.id = "yolo_" + element;
                     cnn_h1.id = "cnn_" + element;
+                    general_h1.id = "general_" + element;
                     let yolo_text = document.createTextNode(element);
                     let cnn_text = document.createTextNode(element);
+                    let general_text = document.createTextNode(element);
                     yolo_h1.appendChild(yolo_text);
                     cnn_h1.appendChild(cnn_text);
+                    general_h1.appendChild(general_text);
                     yoloB.appendChild(yolo_h1);
                     cnnB.appendChild(cnn_h1);
+                    generalB.appendChild(general_h1);
                 });
 
-                if (Alength > Blength){
+                height = 0
+                if (Alength > Blength)
                     height = Alength * 125
-                    yolo.style.height = height;
-                    cnn.style.height = height;
-
-                }
-                else{
+                else
                     height = Blength * 125
-                    yolo.style.height = height;
-                    cnn.style.height = height;
-                }
+                yolo.style.height = height;
+                cnn.style.height = height;
+                general.style.height = height;
                 
                 console.log("slot_idsA")
                 console.log(slot_idsA)
@@ -176,10 +211,12 @@
                     success: function(data){
                         yolo_result = JSON.parse(data.yolo_result);
                         cnn_result = JSON.parse(data.cnn_result);
+                        general_result = JSON.parse(data.general_result);
 
                         // console.log("AJAX IS RUN")
                         console.log(yolo_result)
                         console.log(cnn_result)
+                        console.log(general_result)
 
                         updateSlot()
 
