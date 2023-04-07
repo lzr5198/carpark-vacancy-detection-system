@@ -1,5 +1,7 @@
 import cv2
 import os
+import requests
+from undistort import compute_remap
 
 def get_filenames(directory):
     filenames = []
@@ -17,6 +19,9 @@ def get_index(directory):
         return 0
     
 if __name__ == '__main__':
+    endpoint = "http://localhost:8000/drawRect/undistort/"
+    data = requests.get(url = endpoint).json()
+
     cfp=os.path.abspath(os.path.dirname(__file__))
     f = open(os.getcwd()+'/stream.txt', "r")
     streamPath = f.readline().rstrip()
@@ -35,6 +40,8 @@ if __name__ == '__main__':
 
     while(True):
         _, frame = cap.read()
+        # if data["undistort"]:
+        #     frame = compute_remap(frame)
         cv2.imshow('Recording...', frame)
         out.write(frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
