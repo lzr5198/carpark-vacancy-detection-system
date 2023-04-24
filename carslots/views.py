@@ -13,11 +13,13 @@ import urllib.parse
 # Create your views here.
 result = None
 cnn_result = None
+general_result = None
 
 # get carslot_id for A and B, get yolo and cnn results (ready to be sent to template)
 def get_context():
     global result
     global cnn_result
+    global general_result
     carslots = Carslot.objects.all()
     slot_idsA = []
     slot_idsB = []
@@ -27,13 +29,14 @@ def get_context():
         else:
             slot_idsB.append(carslot.slotId)
     # result = create_carslot_map()
-    json_yolo_result, json_cnn_result = json.dumps(result), json.dumps(cnn_result)
+    json_yolo_result, json_cnn_result, json_general_result = json.dumps(result), json.dumps(cnn_result), json.dumps(general_result)
     slot_idsA, slot_idsB = json.dumps(slot_idsA), json.dumps(slot_idsB)
     context = {
         'slot_idsA': slot_idsA,
         'slot_idsB': slot_idsB,
         'cnn_result': json_cnn_result,
-        'yolo_result': json_yolo_result
+        'yolo_result': json_yolo_result,
+        'general_result': json_general_result,
     }
 
     print("In get context")
@@ -55,6 +58,7 @@ def create_carslot_map():
 def process_data(request):
     global result
     global cnn_result
+    global general_result
     if request.method == "POST":
         # print("POST DATA RECEIVED")
         data = {
@@ -72,6 +76,12 @@ def process_data(request):
         result = compare_bounding_box(data)
         cnn_result_encoded = data["CNN_result"][0]
         cnn_result = json.loads(cnn_result_encoded)
+        general_result = {}
+        for key in result:
+            if result[key] or cnn_result[key]:
+                general_result[key] = 1
+            else:
+                general_result[key] = 0
 
         print("In process_data POST")
         print(cnn_result)
@@ -93,10 +103,12 @@ def ajax_function(request):
     if request.method == "GET":
         json_yolo_result = json.dumps(result)
         json_cnn_result = json.dumps(cnn_result)
+        json_general_result = json.dumps(general_result)
 
         context = {
             'yolo_result': json_yolo_result,
             'cnn_result': json_cnn_result,
+            'general_result': json_general_result
         }
 
         print("In AJAX")
@@ -192,12 +204,5 @@ def IOU(box1, box2):
     area_box2 = width_box2 * height_box2
     area_union = area_box1 + area_box2 - area_inter
 
-    # area_min = area_box1 if area_box1 < area_box2 else area_box2
-    # print("in iou")
-    # print(area_box1)
-    # print(area_box2)
-
     iou = area_inter / area_union
-    # iou = area_inter/area_min
-    # print(iou)
     return iou

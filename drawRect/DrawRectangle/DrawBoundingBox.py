@@ -28,13 +28,13 @@ def get_index():
     else:
         return 0
 
-def get_carslot_id(q, x):
+def get_user_input(q, x, title, label):
     root = tk.Tk()
 
-    root.title("Carslot ID")
+    root.title(title)
     root.geometry("300x200")
 
-    input_label = tk.Label(root, text="Enter the carslot ID:")
+    input_label = tk.Label(root, text=label)
     input_entry = tk.Entry(root)
     input_entry.focus_set()
     def get_input(event=None):
@@ -188,7 +188,7 @@ def onmouse_draw_rect(event, x, y, flags, draw_rects):
 
         # pop dialog
         carslot_id = Queue()
-        p = Process(target=get_carslot_id, args=(carslot_id, 1))
+        p = Process(target=get_user_input, args=(carslot_id, 1, "Carslot ID", "What's the carslot ID: "))
         p.start()
         p.join() # this blocks until the process terminates
         carslot_id = carslot_id.get()
@@ -249,25 +249,39 @@ def compute_remap(image):
     return image_remap
 
 if __name__ == '__main__':
-    ############################################ using existing image ############################################
+    ############################################ using existing image #########################################
     # currentIndex = str(get_index())
     # # img_loc = cfp + '/raw_imgs/spot' + currentIndex + '.jpg'
-    # img_loc = cfp+'/raw_imgs/spot0.jpg'
-    ############################################ using existing image ############################################
+    # img_loc = cfp+'/raw_imgs/o2_2.jpg'
+    ############################################# using existing image ########################################
 
     ############################################ using rtsp stream ############################################
+
+
+            ################################# automatically name file #################################
+    # currentIndex = str(get_index())
+    # img_loc = cfp + '/raw_imgs/spot' + currentIndex + '.jpg'
+            ################################# automatically name file #################################
+
+            ################################# manually name file ######################################
+
+    # pop dialog
+    textFileName = Queue()
+    p = Process(target=get_user_input, args=(textFileName, 1, "Image Name", "What's the filename: "))
+    p.start()
+    p.join() # this blocks until the process terminates
+    filename = textFileName.get()
+    img_loc = cfp + '/raw_imgs/' + filename + '.jpg'
+            ################################# manually name file ######################################
+
     endpoint = "http://localhost:8000/drawRect/undistort/"
     data = requests.get(url = endpoint).json()
     
     f = open(os.getcwd() + '/stream.txt', "r")
     streamPath = f.readline().rstrip()
     f.close()
-    currentIndex = str(get_index())
 
-    
-    img_loc = cfp + '/raw_imgs/spot' + currentIndex + '.jpg'
-
-    cap= cv2.VideoCapture(streamPath)
+    cap = cv2.VideoCapture(streamPath)
     ret, frame = cap.read()
     if ret != False:
         if data["undistort"]:
@@ -277,7 +291,7 @@ if __name__ == '__main__':
         print("Error: failed to capture frame from RTSP stream")
 
     cap.release()
-    ############################################ using rtsp stream ############################################
+    ############################################# using rtsp stream ############################################
 
     draw_rects = DrawRects(img_loc, (0, 255, 0), 3)
     cv2.namedWindow(WIN_NAME, 0)
