@@ -249,25 +249,22 @@ def compute_remap(image):
     return image_remap
 
 if __name__ == '__main__':
-    ############################################ using existing image ############################################
+    ############################################ using existing image #########################################
     # currentIndex = str(get_index())
     # # img_loc = cfp + '/raw_imgs/spot' + currentIndex + '.jpg'
-    # img_loc = cfp+'/raw_imgs/spot0.jpg'
-    ############################################ using existing image ############################################
+    # img_loc = cfp+'/raw_imgs/o2_2.jpg'
+    ############################################# using existing image ########################################
 
     ############################################ using rtsp stream ############################################
-    endpoint = "http://localhost:8000/drawRect/undistort/"
-    data = requests.get(url = endpoint).json()
-    
-    f = open(os.getcwd() + '/stream.txt', "r")
-    streamPath = f.readline().rstrip()
-    f.close()
 
-    ############################################ automatically name file ############################################
+
+            ################################# automatically name file #################################
     # currentIndex = str(get_index())
     # img_loc = cfp + '/raw_imgs/spot' + currentIndex + '.jpg'
-    ############################################ automatically name file ############################################
-    ############################################ manually name file ############################################
+            ################################# automatically name file #################################
+
+            ################################# manually name file ######################################
+
     # pop dialog
     textFileName = Queue()
     p = Process(target=get_user_input, args=(textFileName, 1, "Image Name", "What's the filename: "))
@@ -275,9 +272,16 @@ if __name__ == '__main__':
     p.join() # this blocks until the process terminates
     filename = textFileName.get()
     img_loc = cfp + '/raw_imgs/' + filename + '.jpg'
-    ############################################ manually name file ############################################
+            ################################# manually name file ######################################
 
-    cap= cv2.VideoCapture(streamPath)
+    endpoint = "http://localhost:8000/drawRect/undistort/"
+    data = requests.get(url = endpoint).json()
+    
+    f = open(os.getcwd() + '/stream.txt', "r")
+    streamPath = f.readline().rstrip()
+    f.close()
+
+    cap = cv2.VideoCapture(streamPath)
     ret, frame = cap.read()
     if ret != False:
         if data["undistort"]:
@@ -287,7 +291,7 @@ if __name__ == '__main__':
         print("Error: failed to capture frame from RTSP stream")
 
     cap.release()
-    ############################################ using rtsp stream ############################################
+    ############################################# using rtsp stream ############################################
 
     draw_rects = DrawRects(img_loc, (0, 255, 0), 3)
     cv2.namedWindow(WIN_NAME, 0)

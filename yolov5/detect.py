@@ -70,47 +70,74 @@ import pandas as pd
 import torch
 from torchvision import transforms
 from matplotlib import cm
+from torchvision.models import resnet50
+import torch.nn.functional as F
+
+trick_counter = 0 
+trick_counter_max = 100
+trick_sum = {}
+
+boundingBoxesFileLoc = cfp + "/CNN/boundingBoxes/spot.txt"
+
+mtime = os.path.getmtime(boundingBoxesFileLoc)
+
 
 class CNN(nn.Module):
     def __init__(self, batchSize):
         super(CNN, self).__init__()
-        # input: 1*64*64 greyScale so 1 channel
-        self.layer1 = nn.Sequential(
-            # Defining a 2D convolution layer
-            Conv2d(in_channels=1, out_channels=32, kernel_size=3, stride=1, padding=1),
-            ReLU(inplace=True),
-            MaxPool2d(kernel_size=2, stride=2)
-        )
-        # 32*32*32
+        self.backbone = resnet50(pretrained=False)
+        self.backbone.load_state_dict(torch.load(cfp + '/CNN/resnet50.pth'))
+        for p in self.backbone.parameters():
+            p.requires_grad = False
+        del self.backbone.fc
+        # input: 3*128*128 greyScale so 3 channels
+
+        # self.layer1=nn.Sequential(
+        #     # Defining a 2D convolution layer
+        #     Conv2d(in_channels=1, out_channels=32, kernel_size=3, stride=1, padding=1),
+        #     ReLU(inplace=True),
+        #     MaxPool2d(kernel_size=2, stride=2)
+        # )
+        # 64*32*32
         self.layer2 = nn.Sequential(
             # Defining a 2D convolution layer
-            Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1),
+            Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1),
 
             ReLU(inplace=True),
             MaxPool2d(kernel_size=2, stride=2)
         )
-        # 64*16*16
+        # 128*16*16
         self.layer3 = nn.Sequential(
             # Defining a 2D convolution layer
-            Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1),
+            Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=1),
             ReLU(inplace=True),
             MaxPool2d(kernel_size=2, stride=2)
         )
-        # 64*8*8
-        self.fc1 = nn.Linear(in_features=64 * 8 * 8, out_features=200)
-        self.fc2 = nn.Linear(in_features=200, out_features=1)
+        # 256*8*8
+        self.fc1 = nn.Linear(in_features=256 * 8 * 8, out_features=256)
+        self.fc2 = nn.Linear(in_features=256, out_features=1)
         # -inf, inf
 
     def forward(self, x):
-        x = self.layer1(x)
+        x = self.backbone.conv1(x)
+        # print(x.requires_grad)
+        x = self.backbone.bn1(x)
+        # print(x.requires_grad)
+        x = self.backbone.relu(x)
+        # print(x.requires_grad)
+        x = self.backbone.maxpool(x)
 
+        # print(x.requires_grad)
         x = self.layer2(x)
-
+        # print(x.requires_grad)
         x = self.layer3(x)
-
+        # print(x.requires_grad)
         x = self.fc1(flatten(x, 1))
+        x = F.relu(x)
         x = self.fc2(x)
+        # print(x.requires_grad)
         result = sigmoid(x)
+        # print(result.requires_grad)
         return result
 
 @smart_inference_mode()
@@ -178,12 +205,12 @@ def run(
 
     # CNN Model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    fypCNN = CNN(64)
-    model_dict = torch.load(cfp + '/CNN/tensors.pt', map_location=torch.device('cpu'))
+    fypCNN = CNN(16)
+    model_dict = torch.load(cfp + '/CNN/tensors_res50.pt', map_location=torch.device('cpu'))
     fypCNN.load_state_dict(model_dict)
     fypCNN = fypCNN.to(device)
 
-    trans_resize = transforms.Resize([64, 64])
+    trans_resize = transforms.Resize([128, 128])
     trans_tograyscale = transforms.Grayscale(num_output_channels=1)
     trans_totensor = transforms.ToTensor()
     trans_compose = transforms.Compose([trans_resize, trans_tograyscale, trans_totensor])
@@ -193,12 +220,27 @@ def run(
     CNN_results = {}
     img_set = {}
 
+    # Mean filtering trick 
+    # For now, it seems trick_dictionary is no longer needed 
+    trick_dictionary = initialize_mean_filtering()
+
     # Run inference
     model.warmup(imgsz=(1 if pt or model.triton else bs, 3, *imgsz))  # warmup
     seen, windows, dt = 0, [], (Profile(), Profile(), Profile())
-    for path, im, im0s, vid_cap, s in dataset:
-        BoundingBoxSet = initialize_bounding_box_set()
+    start = time.time()
 
+    for path, im, im0s, vid_cap, s in dataset:
+        global trick_counter_max
+        global trick_counter
+        global mtime
+
+        if os.path.getmtime(boundingBoxesFileLoc) > mtime:
+            mtime = os.path.getmtime(boundingBoxesFileLoc)
+            trick_dictionary = initialize_mean_filtering()
+            CNN_results = {}
+            time.sleep(1)
+
+        BoundingBoxSet = initialize_bounding_box_set()
         # im0s[0] = compute_remap(im0s[0])
         with dt[0]:
             # For CNN
@@ -206,7 +248,6 @@ def run(
             print("img shape is: ")
             print(im0s[0].shape)
             print("-----------")
-
 
             img = im0s
             img = Image.fromarray(np.uint8(img[0])).convert('RGB')
@@ -219,8 +260,6 @@ def run(
 
             # img = Image.fromarray(np.uint8(img)).convert('RGB')
             ############################################# For video #############################################
-
-
 
             im = torch.from_numpy(im).to(model.device)
             im = im.half() if model.fp16 else im.float()  # uint8 to fp16/32
@@ -236,6 +275,7 @@ def run(
                 img_mean = img_out.mean()
                 std = 0.225
                 img_out = (img_out - img_mean) / std
+                img_out = img_out.repeat(3,1,1)
                 img_out = img_out.unsqueeze(0)
 
                 img_set[key] = img_out
@@ -264,6 +304,7 @@ def run(
         # pred = utils.general.apply_classifier(pred, classifier_model, im, im0s)
 
         # Process predictions
+        CNN_results_2 = {}
         for i, det in enumerate(pred):  # per image
             seen += 1
             if webcam:  # batch_size >= 1
@@ -292,10 +333,32 @@ def run(
                 for key in CNN_results:
                     tmp = CNN_results[key].numpy()[0][0]
                     if tmp > 0.7:
+                        # post_cnn[key] = 1
+                        if trick_dictionary[key][trick_counter] == 0:
+                            trick_sum[key] += 1
+                        trick_dictionary[key][trick_counter] = 1  # This line may be unnecessary
+                    else:
+                        # post_cnn[key] = 0
+                        if trick_dictionary[key][trick_counter] == 1:
+                            trick_sum[key] -= 1
+                        trick_dictionary[key][trick_counter] = 0  # This line may be unnecessary
+
+                trick_counter = (trick_counter + 1) % trick_counter_max  # Update trick_counter
+
+                for key in CNN_results:
+                    tmp = trick_sum[key]/trick_counter_max
+                    if tmp > 0.7:
                         post_cnn[key] = 1
                     else:
                         post_cnn[key] = 0
-                
+                    CNN_results_2[key] = trick_sum[key]
+                f = open(cfp + '/CNN/CNN_result_2.txt', 'w')
+                for key in CNN_results_2:
+                    end = time.time()
+                    f.write('Bounding Box ' + str(key) + ' with coordinates: ' + str(BoundingBoxSet[key])
+                            + ' produces result: ' + str(CNN_results_2[key]) + ' time: ' + str(end-start) + '\n')
+                f.close()
+                print(post_cnn)
                 cnn_result_encoded = json.dumps(post_cnn)
                 
                 post_data = {
@@ -379,12 +442,28 @@ def run(
     if update:
         strip_optimizer(weights[0])  # update model (to fix SourceChangeWarning)
 
+def initialize_mean_filtering():
+    global trick_sum 
+    carslot_ids = [] 
+    trick_dict = {} 
+    f = open(boundingBoxesFileLoc, 'r') 
+    for i, line in enumerate(f):
+        line = line.rstrip() 
+        if i % 2 == 0:
+            carslot_ids.append(line)
+    f.close()
+    # Initialization of global variables for the purpose of mean filtering in time 
+    for i in range(len(carslot_ids)): 
+        trick_dict[carslot_ids[i]] = [0] * trick_counter_max
+        trick_sum[carslot_ids[i]] = 0
+    return trick_dict
+
 def initialize_bounding_box_set():
     carslot_ids = []
     box_coor = []
     BoundingBoxSet = {}
 
-    f = open(cfp + '/CNN/boundingBoxes/spot.txt', 'r')
+    f = open(boundingBoxesFileLoc, 'r')
     for i, line in enumerate(f):
         line = line.rstrip()
         if i % 2 == 0: carslot_ids.append(line)
