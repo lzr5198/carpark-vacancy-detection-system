@@ -1,7 +1,5 @@
 <body>
     <h1>FYP Smart Car Park</h1>
-    {% if request.user.is_authenticated%}
-        {% block header %}
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 
             <style>
@@ -131,7 +129,6 @@
                 }
             </style>
             <div class="button-container">
-                <!-- <a class="link" href="{% url 'logout' %}">Logout</a> -->
                 <a class="link" href="{% url 'draw' %}">Annotate Parking Spaces</a>
                 <a class="link" href="{% url 'spot_list' %}">Existing Templates</a>
                 <!-- <a href="{% url 'screenshot' %}">Take a Screenshot</a> -->
@@ -160,31 +157,12 @@
                     })
                 }
             </script>
-        {% endblock %}
-    {% endif %}
-
     <hr>
-    
-    {%if messages%}
-        <ul class="messages">
-            {%for message in messages%}
-                <li>{{message}}</li>
-            {%endfor%}
-        </ul>
-    {%endif%}
-    
-    {% block content %}
-        <div>
-            <form method="POST" action="">
-                {%csrf_token%}
-                <label>Username:</label>
-                <input type="text" name="username" placeholder="Enter Username" />
-                <label> Passsword:</label>
-                <input type="password" name="password" placeholder="Enter Password" />
-                <input type="submit" value="Login" />
-            </form>
-        </div>
-        
-    {% endblock content%}
+
+
+{% block content%}
+{% endblock content%}
+
+
 
 </body>

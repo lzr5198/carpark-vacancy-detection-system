@@ -1,2 +1,0 @@
-rtsp://192.168.0.158:554/stream1
-rtsp://zephyr.rtsp.stream/movie?streamKey=4ddbb5ac160697d0a367e1af7293447a

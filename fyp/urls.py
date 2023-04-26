@@ -22,5 +22,5 @@ urlpatterns = [
     path("carslots/", include("carslots.urls")),
     path("drawRect/", include("drawRect.urls")),
     path("capture/", include("capture.urls")),
-    path("", include("authenticate.urls")),
+    path("", include("carslots.urls")),
 ]

@@ -55,6 +55,7 @@ def create_carslot_map():
         result[carslot.slotId] = False
     return result
 
+
 def process_data(request):
     global result
     global cnn_result
@@ -76,12 +77,16 @@ def process_data(request):
         result = compare_bounding_box(data)
         cnn_result_encoded = data["CNN_result"][0]
         cnn_result = json.loads(cnn_result_encoded)
+
         general_result = {}
         for key in result:
-            if result[key] or cnn_result[key]:
-                general_result[key] = 1
-            else:
+            if result[key] == -1:
                 general_result[key] = 0
+            else:
+                if result[key] or cnn_result[key]:
+                    general_result[key] = 1
+                else:
+                    general_result[key] = 0
 
         print("In process_data POST")
         print(cnn_result)
@@ -171,16 +176,19 @@ def compare_bounding_box(data):
     result = create_carslot_map()
     
     for i in range(len(data["object_name"])):
-        if data["object_name"][i] != "car" and data["object_name"][i] != "truck":
-            continue
+        
         for carslot in Carslot.objects.all():
             car_coor = [int(data['x1'][i]), int(data['y1'][i]), int(data['x2'][i]), int(data['y2'][i])]
             carslots_coor = [int(carslot.x1), int(carslot.y1), int(carslot.x2), int(carslot.y2)]
             iou = IOU(car_coor, carslots_coor)
 
+            
             # If there is a car, set to true
             if iou > 0.3 and iou <= 1:
-                result[carslot.slotId] = True
+                if data["object_name"][i] != "car" and data["object_name"][i] != "truck" and data["object_name"][i] != "bus":
+                    result[carslot.slotId] = -1
+                else:
+                    result[carslot.slotId] = True
     return result
 
 def IOU(box1, box2):
