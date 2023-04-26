@@ -92,12 +92,6 @@ class CNN(nn.Module):
         del self.backbone.fc
         # input: 3*128*128 greyScale so 3 channels
 
-        # self.layer1=nn.Sequential(
-        #     # Defining a 2D convolution layer
-        #     Conv2d(in_channels=1, out_channels=32, kernel_size=3, stride=1, padding=1),
-        #     ReLU(inplace=True),
-        #     MaxPool2d(kernel_size=2, stride=2)
-        # )
         # 64*32*32
         self.layer2 = nn.Sequential(
             # Defining a 2D convolution layer
@@ -281,9 +275,6 @@ def run(
                 img_set[key] = img_out
 
                 CNN_results[key] = fypCNN(img_set[key])
-
-                # print("CNN_result for ", key)
-                # print(CNN_results[key])
                 
             f = open(cfp + '/CNN/CNN_result.txt', 'w')
             for key in CNN_results:
