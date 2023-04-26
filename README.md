@@ -6,11 +6,11 @@ This repo presents our Final Year Project at HKUST, which is jointly developed b
 https://user-images.githubusercontent.com/90033411/234069586-54ca39bf-d9e7-43b0-8feb-9f1b1e390ad4.mov
 
 ### Getting started
-- Download the pretrained CNN parameters `tensors_res50.pt` from [this link](https://drive.google.com/file/d/1LL67CrCH0qHLa8GSIlBJMYkC_Ki_FZ9w/view?usp=share_link) and place it under the `carpark-vacancy-detection-system/yolov5/CNN` directory.
-
+- Download the pretrained CNN parameters tensors_res50.pt from [this link](https://drive.google.com/file/d/1LL67CrCH0qHLa8GSIlBJMYkC_Ki_FZ9w/view?usp=share_link) and copy it under `carpark-vacancy-detection-system/yolov5/CNN` directory.
+- Replace the rtsp link in the `stream.txt` file.
+- Run `pip install -r requirement.txt` to install the needed packages.
 - Run ``python manage.py runserver`` to activate the visualization system.
-
-- Run ``python ./yolov5/detect.py --source 'stream.txt'`` to activate the detection system.
+- Run ``python3 ./yolov5/detect.py --source 'stream.txt'`` to activate the detection system.
 
 ### CNN Training
 
