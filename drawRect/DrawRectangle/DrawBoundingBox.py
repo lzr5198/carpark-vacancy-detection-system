@@ -162,9 +162,6 @@ class DrawRects(object):
 
 def onmouse_draw_rect(event, x, y, flags, draw_rects):
     global carslot_ids
-    # create the file anyway
-    # f=open(cfp+'/box_coordinates/'+draw_rects.img_name+'.txt','w')
-    # f.close()
 
     if event == cv2.EVENT_LBUTTONDOWN:
         # pick first point of rect

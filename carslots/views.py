@@ -28,7 +28,6 @@ def get_context():
             slot_idsA.append(carslot.slotId)
         else:
             slot_idsB.append(carslot.slotId)
-    # result = create_carslot_map()
     json_yolo_result, json_cnn_result, json_general_result = json.dumps(result), json.dumps(cnn_result), json.dumps(general_result)
     slot_idsA, slot_idsB = json.dumps(slot_idsA), json.dumps(slot_idsB)
     context = {
@@ -38,11 +37,6 @@ def get_context():
         'yolo_result': json_yolo_result,
         'general_result': json_general_result,
     }
-
-    print("In get context")
-    print(result)
-    print(cnn_result)
-    print()
 
     return context
 
@@ -88,18 +82,10 @@ def process_data(request):
                 else:
                     general_result[key] = 0
 
-        print("In process_data POST")
-        print(cnn_result)
-        print(result)
-        print()
-
         return HttpResponse()
     
     if request.method == "GET":
         context = get_context()
-        print("CONTEXT IN GET IN PROCESS_DATA")
-        print(context)
-        print()
         return render(request, "carslots.html", context)
 
 def ajax_function(request):
@@ -115,9 +101,6 @@ def ajax_function(request):
             'cnn_result': json_cnn_result,
             'general_result': json_general_result
         }
-
-        print("In AJAX")
-        print(context)
         
         return HttpResponse(json.dumps(context), content_type="application/json")
 
@@ -141,9 +124,6 @@ def overwrite_obj(request):
         if i % 2 == 0: carslot_ids.append(line)
         else: box_coor.append(line)
     f.close()
-    # print(os.getcwd())
-    # print("carslot_ids: ", carslot_ids)
-    # print("box_coor", box_coor)
 
     # overwrite files in cnn
     f=open(os.getcwd() + '/yolov5/CNN/boundingBoxes/spot.txt','w')
@@ -157,8 +137,6 @@ def overwrite_obj(request):
 
     box_coor = [box.split(',') for box in box_coor]
     box_coor = [[int(coor) for coor in slot] for slot in box_coor]
-
-    print("box_coor", box_coor)
 
     # create objects
     for i in range(len(carslot_ids)):
@@ -182,7 +160,6 @@ def compare_bounding_box(data):
             carslots_coor = [int(carslot.x1), int(carslot.y1), int(carslot.x2), int(carslot.y2)]
             iou = IOU(car_coor, carslots_coor)
 
-            
             # If there is a car, set to true
             if iou > 0.3 and iou <= 1:
                 if data["object_name"][i] != "car" and data["object_name"][i] != "truck" and data["object_name"][i] != "bus":

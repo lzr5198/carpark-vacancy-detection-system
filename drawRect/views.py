@@ -30,8 +30,6 @@ def draw(request):
 
 def spot(request):
     image_name = str(request.GET.get('image_name'))
-    
-    # image_name = json.dumps(image_name)
 
     context = {'image_name': image_name}
     return render(request, 'spot.html', context)
